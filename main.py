@@ -321,12 +321,19 @@ async def update_status():
 
 @bot.event
 async def on_ready():
-    print(f"Logged in as {bot.user}")
-    await bot.change_presence(activity=discord.Game(name="The Best Auto-Moderation Bot"), status=discord.Status.online)
-    update_status.start()
+    print(f"✅ Logged in as {bot.user} | ID: {bot.user.id}")
+    await update_status()  # Set status immediately on startup
+    print("🔧 ModerationX is now monitoring servers.")
 
-# Run bot
-token = os.getenv('DISCORD_TOKEN')
-if not token:
-    raise RuntimeError("DISCORD_TOKEN not set in environment variables")
-bot.run(token)
+# Background task to update bot status every minute
+@tasks.loop(minutes=1)
+async def update_status():
+    total_members = sum(g.member_count for g in bot.guilds)
+    await bot.change_presence(activity=discord.Game(name=f"Protecting {total_members} members"), status=discord.Status.online)
+
+# Start background loop
+update_status.start()
+
+# Run the bot
+bot.run(os.getenv("TOKEN"))
+
