@@ -140,29 +140,31 @@ async def check_for_auto_ban_or_kick(user):
 
 @bot.command(name="timeout")
 @commands.has_permissions(moderate_members=True)
-async def timeout(ctx, user: discord.Member, duration: str, *, reason="No reason provided"):
+async def timeout(ctx, user: discord.Member, duration: str, *, reason: str = "No reason provided"):
+    # 1) Parse the duration (e.g. "5min", "2h", "1d")
+    match = re.match(r'^(\d+)(s|sec|m|min|h|hr|d|day)$', duration.lower())
+    if not match:
+        return await ctx.send("❌ Invalid duration. Use formats like `10s`, `5min`, `2h`, or `1d`.")
+    
+    value, unit = int(match[1]), match[2]
+    if unit in ('s', 'sec'):
+        delta = timedelta(seconds=value)
+    elif unit in ('m', 'min'):
+        delta = timedelta(minutes=value)
+    elif unit in ('h', 'hr'):
+        delta = timedelta(hours=value)
+    else:  # 'd' or 'day'
+        delta = timedelta(days=value)
+
+    until = discord.utils.utcnow() + delta
+
     try:
-        match = re.match(r"^(\d+)(s|sec|m|min|h|hr|d|day)$", duration.lower())
-        if not match:
-            await ctx.send("❌ Invalid format. Use like `10s`, `5min`, `2h`, or `1d`.")
-            return
-
-        value, unit = int(match.group(1)), match.group(2)
-        delta = timedelta(seconds=value) if unit in ['s', 'sec'] else \
-                timedelta(minutes=value) if unit in ['m', 'min'] else \
-                timedelta(hours=value) if unit in ['h', 'hr'] else \
-                timedelta(days=value)
-
-        until = discord.utils.utcnow() + delta
-
-        # Use only positional arguments, NO keywords
-        await discord.Member.timeout(user, until, reason)
-
+        # Only one positional argument (until); reason as keyword-only
+        await user.timeout(until, reason=reason)
         log_punishment(user.id, f"Timeout for {duration}", reason)
         await ctx.send(f"✅ {user.mention} has been timed out for **{duration}**.\n📝 Reason: {reason}")
-
     except discord.Forbidden:
-        await ctx.send("❌ I don't have permission to timeout this member.")
+        await ctx.send("❌ I lack permission to timeout that member.")
     except Exception as e:
         await ctx.send(f"⚠️ An error occurred: `{e}`")
 
