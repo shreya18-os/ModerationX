@@ -170,7 +170,7 @@ async def update_status():
         total_members += len(guild.members)
     
     await bot.change_presence(activity=discord.Game(name="The Best Auto-Moderation Bot"), status=discord.Status.online)
-    await bot.change_presence(activity=discord.Game(name=f"Protecting {total_members} members"))
+    await bot.change_presence(activity=discord.Game(name=f"Protecting {total_members}k members"))
 
 # Start the task when the bot is ready (Existing feature)
 @bot.event
