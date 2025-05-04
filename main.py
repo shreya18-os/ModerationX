@@ -105,6 +105,17 @@ async def ban(ctx, user: discord.User, reason=None):
     log_punishment(user.id, "Ban", reason)
     await ctx.send(f"{user} was banned for: {reason}")
 
+@kick.error
+async def kick_error(ctx, error):
+    if isinstance(error, commands.MissingPermissions):
+        await ctx.send("You need Administrator permissions to use this command.")
+
+@ban.error
+async def ban_error(ctx, error):
+    if isinstance(error, commands.MissingPermissions):
+        await ctx.send("You need Administrator permissions to use this command.")
+
+
 
 # Custom Emoji Button for UI
 @bot.command(name="emoji")
