@@ -94,6 +94,7 @@ async def check_spam(message):
             log_punishment(user.id, "Spam", "Spamming messages in a short period.")
     conn.close()
 
+
 # Anti-Bot Protection (Existing feature)
 @bot.event
 async def on_member_join(member):
@@ -103,6 +104,53 @@ async def on_member_join(member):
         log_punishment(member.id, "Bot Kick", "Attempted to join as a bot.")
 
 # Anti-Nuke Protection (Existing feature)
+
+import asyncio
+import discord
+from discord.ext import commands
+
+# … your existing bot setup …
+
+@bot.event
+async def on_guild_channel_delete(channel):
+    # give Discord a moment to populate the audit log
+    await asyncio.sleep(1)
+
+    guild = channel.guild
+    # fetch the most recent channel-delete audit log entry
+    entry = None
+    async for e in guild.audit_logs(limit=1, action=discord.AuditLogAction.channel_delete):
+        entry = e
+        break
+
+    if not entry:
+        return  # couldn’t find who deleted it
+
+    deleter = entry.user
+    # don’t punish the bot itself or server owner
+    if deleter == bot.user or deleter == guild.owner:
+        return
+
+    # optionally skip admins or whitelisted roles
+    if deleter.guild_permissions.administrator:
+        return
+
+    # kick the user who deleted the channel
+    try:
+        await guild.kick(deleter, reason=f"Deleted channel #{channel.name}")
+        log_punishment(deleter.id, "Kick", f"Deleted channel {channel.name}")
+        # notify in the system channel (or specify your mod‑log channel)
+        if guild.system_channel:
+            await guild.system_channel.send(
+                f"🔨 {deleter.mention} was kicked for deleting channel **#{channel.name}**."
+            )
+    except discord.Forbidden:
+        # bot lacks permission to kick
+        if guild.system_channel:
+            await guild.system_channel.send(
+                f"⚠️ Tried to kick {deleter.mention} for deleting a channel, but lacked permissions."
+            )
+
 @bot.event
 async def on_guild_channel_create(channel):
     # If too many channels are created in a short time, consider it as a nuke attempt
