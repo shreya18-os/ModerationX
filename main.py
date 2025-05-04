@@ -144,24 +144,20 @@ async def timeout(ctx, user: discord.Member, duration: str, *, reason="No reason
     try:
         match = re.match(r"^(\d+)(s|sec|m|min|h|hr|d|day)$", duration.lower())
         if not match:
-            await ctx.send("❌ Invalid duration format. Use like `10s`, `5min`, `2h`, or `1d`.")
+            await ctx.send("❌ Invalid format. Use like `10s`, `5min`, `2h`, or `1d`.")
             return
 
         value, unit = int(match.group(1)), match.group(2)
-        
-        if unit in ['s', 'sec']:
-            delta = timedelta(seconds=value)
-        elif unit in ['m', 'min']:
-            delta = timedelta(minutes=value)
-        elif unit in ['h', 'hr']:
-            delta = timedelta(hours=value)
-        elif unit in ['d', 'day']:
-            delta = timedelta(days=value)
+        delta = timedelta(seconds=value) if unit in ['s', 'sec'] else \
+                timedelta(minutes=value) if unit in ['m', 'min'] else \
+                timedelta(hours=value) if unit in ['h', 'hr'] else \
+                timedelta(days=value)
 
         until = discord.utils.utcnow() + delta
 
-        # ❗ Correct number and order of arguments
-        await user.timeout(until, reason)
+        # Use only positional arguments, NO keywords
+        await discord.Member.timeout(user, until, reason)
+
         log_punishment(user.id, f"Timeout for {duration}", reason)
         await ctx.send(f"✅ {user.mention} has been timed out for **{duration}**.\n📝 Reason: {reason}")
 
@@ -169,7 +165,6 @@ async def timeout(ctx, user: discord.Member, duration: str, *, reason="No reason
         await ctx.send("❌ I don't have permission to timeout this member.")
     except Exception as e:
         await ctx.send(f"⚠️ An error occurred: `{e}`")
-
 
 
 @bot.command(name="kick")
