@@ -90,7 +90,6 @@ async def on_guild_channel_create(channel):
     conn.close()
 
 # Kick/Ban commands
-# Kick/Ban commands
 @bot.command(name="kick")
 @commands.has_permissions(administrator=True)  # Only admin can use the command
 async def kick(ctx, user: discord.User, reason=None):
@@ -115,8 +114,6 @@ async def ban_error(ctx, error):
     if isinstance(error, commands.MissingPermissions):
         await ctx.send("You need Administrator permissions to use this command.")
 
-
-
 # Custom Emoji Button for UI
 @bot.command(name="emoji")
 async def emoji(ctx):
@@ -131,10 +128,21 @@ async def emoji(ctx):
     view.add_item(button)
     await ctx.send("Here’s a button for you!", view=view)
 
-# Bot Ready
+# Update bot status to show member protection count
+@tasks.loop(seconds=60)  # Update every 60 seconds
+async def update_status():
+    total_members = 0
+    for guild in bot.guilds:
+        total_members += len(guild.members)
+    
+    # Set the custom status (Protecting <amount> members)
+    await bot.change_presence(activity=discord.Game(name=f"Protecting {total_members} members"))
+
+# Start the task when the bot is ready
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user}")
+    update_status.start()  # Start updating the bot's status
 
 # Run the bot
 bot.run(os.getenv('DISCORD_TOKEN'))
