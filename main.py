@@ -90,19 +90,21 @@ async def on_guild_channel_create(channel):
     conn.close()
 
 # Kick/Ban commands
+# Kick/Ban commands
 @bot.command(name="kick")
-@commands.has_permissions(kick_members=True)
+@commands.has_permissions(administrator=True)  # Only admin can use the command
 async def kick(ctx, user: discord.User, reason=None):
     await user.kick(reason=reason)
     log_punishment(user.id, "Kick", reason)
     await ctx.send(f"{user} was kicked for: {reason}")
 
 @bot.command(name="ban")
-@commands.has_permissions(ban_members=True)
+@commands.has_permissions(administrator=True)  # Only admin can use the command
 async def ban(ctx, user: discord.User, reason=None):
     await user.ban(reason=reason)
     log_punishment(user.id, "Ban", reason)
     await ctx.send(f"{user} was banned for: {reason}")
+
 
 # Custom Emoji Button for UI
 @bot.command(name="emoji")
