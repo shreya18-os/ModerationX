@@ -96,35 +96,103 @@ async def check_spam(message):
 
 
 # Anti-Bot Protection (Existing feature)
+WHITELIST_FILE = "whitelist.txt"
+
+# Load whitelist from file
 def load_whitelist():
-    if not os.path.exists("whitelist.txt"):
+    if not os.path.exists(WHITELIST_FILE):
         return set()
-    with open("whitelist.txt", "r") as f:
+    with open(WHITELIST_FILE, "r") as f:
         return set(line.strip() for line in f.readlines())
 
+# Save a new bot ID to the whitelist
 def save_to_whitelist(bot_id):
-    with open("whitelist.txt", "a") as f:
+    with open(WHITELIST_FILE, "a") as f:
         f.write(f"{bot_id}\n")
 
+# Remove a bot ID from the whitelist
+def remove_from_whitelist(bot_id):
+    if not os.path.exists(WHITELIST_FILE):
+        return
+    with open(WHITELIST_FILE, "r") as f:
+        lines = f.readlines()
+    with open(WHITELIST_FILE, "w") as f:
+        for line in lines:
+            if line.strip() != str(bot_id):
+                f.write(line)
+
+# Kick unwhitelisted bot on join
 @bot.event
 async def on_member_join(member):
     if member.bot:
         whitelist = load_whitelist()
         if str(member.id) not in whitelist:
             try:
-                await member.kick(reason="Bots are not allowed to join.")
+                await member.kick(reason="Unwhitelisted bot.")
                 await member.guild.system_channel.send(
-                    f"{member} was kicked for being a bot. To allow bots, whitelist their ID using `&whitelistbot <bot_id>`."
+                    f"{member} was kicked for being a bot. To allow bots, use `&whitelistbot <bot_id>`."
                 )
                 log_punishment(member.id, "Bot Kick", "Unwhitelisted bot tried to join.")
             except discord.Forbidden:
                 await member.guild.system_channel.send("⚠️ I don’t have permission to kick bots.")
 
+# Command to add to whitelist
 @bot.command(name="whitelistbot")
 @commands.has_permissions(administrator=True)
 async def whitelist_bot(ctx, bot_id: int):
     save_to_whitelist(str(bot_id))
     await ctx.send(f"✅ Bot with ID `{bot_id}` has been whitelisted.")
+
+# Command to remove from whitelist
+@bot.command(name="removewl")
+@commands.has_permissions(administrator=True)
+async def remove_whitelist(ctx, bot_id: int):
+    remove_from_whitelist(bot_id)
+    await ctx.send(f"🗑️ Bot with ID `{bot_id}` has been removed from the whitelist.")
+
+# Security actions: check audit logs
+async def check_audit(guild, action_type):
+    async for entry in guild.audit_logs(limit=1, action=action_type):
+        if entry.user.bot:
+            whitelist = load_whitelist()
+            if str(entry.user.id) not in whitelist:
+                try:
+                    await guild.kick(entry.user, reason=f"Unauthorized bot {action_type.name}.")
+                    if guild.system_channel:
+                        await guild.system_channel.send(
+                            f"🚫 `{entry.user}` was kicked for unauthorized {action_type.name}."
+                        )
+                except discord.Forbidden:
+                    pass
+
+@bot.event
+async def on_guild_channel_create(channel):
+    await asyncio.sleep(1)
+    await check_audit(channel.guild, discord.AuditLogAction.channel_create)
+
+@bot.event
+async def on_guild_channel_delete(channel):
+    await asyncio.sleep(1)
+    await check_audit(channel.guild, discord.AuditLogAction.channel_delete)
+
+@bot.event
+async def on_guild_update(before, after):
+    if before.name != after.name:
+        await asyncio.sleep(1)
+        await check_audit(after, discord.AuditLogAction.guild_update)
+
+# Detect @everyone/@here ping by unwhitelisted bots
+@bot.event
+async def on_message(message):
+    if message.author.bot:
+        whitelist = load_whitelist()
+        if str(message.author.id) not in whitelist and ("@everyone" in message.content or "@here" in message.content):
+            try:
+                await message.guild.kick(message.author, reason="Unwhitelisted bot ping abuse.")
+                await message.channel.send(f"🚨 `{message.author}` was kicked for using mass ping without whitelist.")
+            except discord.Forbidden:
+                pass
+    await bot.process_commands(message)
 
 # Anti-Nuke Protection (Existing feature)
 
