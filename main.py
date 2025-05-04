@@ -87,6 +87,20 @@ async def check_spam(message):
         log_warning(message.author.id, "Spam")
         await check_for_auto_ban_or_kick(message.author, message.channel)
 
+
+@bot.command(name="unban")
+@commands.has_permissions(ban_members=True)
+async def unban(ctx, user_id: int):
+    try:
+        user = await bot.fetch_user(user_id)  # Fetch the user using their ID
+        await ctx.guild.unban(user)  # Unban the user from the server
+        await ctx.send(f"✅ {user} has been unbanned from the server.")
+    except discord.NotFound:
+        await ctx.send("❌ No user found with that ID.")
+    except discord.Forbidden:
+        await ctx.send("❌ I don't have permission to unban members.")
+    except discord.HTTPException:
+        await ctx.send("❌ An error occurred while trying to unban the user.") 
 # Bot Whitelist
 WHITELIST_FILE = "whitelist.txt"
 
