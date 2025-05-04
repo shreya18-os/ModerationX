@@ -19,7 +19,7 @@ intents.bans = True
 intents.messages = True
 intents.typing = False
 intents.presences = False
-bot = commands.Bot(command_prefix="!", intents=intents)
+bot = commands.Bot(command_prefix="&", intents=intents)
 
 # Database setup
 def db_connect():
