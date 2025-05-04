@@ -96,12 +96,35 @@ async def check_spam(message):
 
 
 # Anti-Bot Protection (Existing feature)
+def load_whitelist():
+    if not os.path.exists("whitelist.txt"):
+        return set()
+    with open("whitelist.txt", "r") as f:
+        return set(line.strip() for line in f.readlines())
+
+def save_to_whitelist(bot_id):
+    with open("whitelist.txt", "a") as f:
+        f.write(f"{bot_id}\n")
+
 @bot.event
 async def on_member_join(member):
     if member.bot:
-        await member.kick(reason="Bots are not allowed to join.")
-        await member.guild.system_channel.send(f"{member} was kicked for being a bot.")
-        log_punishment(member.id, "Bot Kick", "Attempted to join as a bot.")
+        whitelist = load_whitelist()
+        if str(member.id) not in whitelist:
+            try:
+                await member.kick(reason="Bots are not allowed to join.")
+                await member.guild.system_channel.send(
+                    f"{member} was kicked for being a bot. To allow bots, whitelist their ID using `&whitelistbot <bot_id>`."
+                )
+                log_punishment(member.id, "Bot Kick", "Unwhitelisted bot tried to join.")
+            except discord.Forbidden:
+                await member.guild.system_channel.send("⚠️ I don’t have permission to kick bots.")
+
+@bot.command(name="whitelistbot")
+@commands.has_permissions(administrator=True)
+async def whitelist_bot(ctx, bot_id: int):
+    save_to_whitelist(str(bot_id))
+    await ctx.send(f"✅ Bot with ID `{bot_id}` has been whitelisted.")
 
 # Anti-Nuke Protection (Existing feature)
 
