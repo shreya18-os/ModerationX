@@ -137,6 +137,23 @@ async def check_for_auto_ban_or_kick(user):
 
 # Kick/Ban commands (Existing feature)
 
+@bot.command(name="unmute")
+@commands.has_permissions(moderate_members=True)
+async def unmute(ctx, user: discord.Member, *, reason: str = "No reason provided"):
+    # Check if the member is timed out
+    if user.is_timed_out():
+        try:
+            # Remove the timeout
+            await user.timeout(None, reason=reason)
+            log_punishment(user.id, "Unmute", reason)
+            await ctx.send(f"✅ {user.mention} has been unmuted.\n📝 Reason: {reason}")
+        except discord.Forbidden:
+            await ctx.send("❌ I lack permission to unmute that member.")
+        except Exception as e:
+            await ctx.send(f"⚠️ An error occurred: `{e}`")
+    else:
+        await ctx.send("❌ This user is not currently muted.")
+
 
 @bot.command(name="timeout")
 @commands.has_permissions(moderate_members=True)
