@@ -139,6 +139,10 @@ async def on_message(message):
                 pass
         return
 
+
+# REMOVE DEFAULT HELP COMMAND
+bot.remove_command('help')
+
     # Custom help command
 @bot.command(name='help')
 async def help_command(ctx):
