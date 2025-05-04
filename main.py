@@ -142,15 +142,13 @@ async def check_for_auto_ban_or_kick(user):
 @commands.has_permissions(moderate_members=True)
 async def timeout(ctx, user: discord.Member, duration: str, *, reason="No reason provided"):
     try:
-        # Parse duration string (e.g., "1s", "5min", "2h", "1d")
         match = re.match(r"^(\d+)(s|sec|m|min|h|hr|d|day)$", duration.lower())
         if not match:
             await ctx.send("❌ Invalid duration format. Use formats like `1s`, `5min`, `2h`, `1d`.")
             return
         
         value, unit = int(match.group(1)), match.group(2)
-
-        # Convert to timedelta
+        
         if unit in ['s', 'sec']:
             delta = timedelta(seconds=value)
         elif unit in ['m', 'min']:
@@ -163,8 +161,8 @@ async def timeout(ctx, user: discord.Member, duration: str, *, reason="No reason
             await ctx.send("❌ Invalid duration unit.")
             return
 
-        # Apply timeout
-        await user.timeout(until=discord.utils.utcnow() + delta, reason=reason)
+        until_time = discord.utils.utcnow() + delta
+        await user.timeout(until_time, reason)  # ✅ FIXED: positional args only
         log_punishment(user.id, f"Timeout for {duration}", reason)
         await ctx.send(f"✅ {user.mention} has been timed out for **{duration}**.\n📝 Reason: {reason}")
     
@@ -172,6 +170,7 @@ async def timeout(ctx, user: discord.Member, duration: str, *, reason="No reason
         await ctx.send("❌ I don't have permission to timeout this member.")
     except Exception as e:
         await ctx.send(f"⚠️ An error occurred: `{e}`")
+
 
 
 @bot.command(name="kick")
