@@ -139,6 +139,34 @@ async def on_message(message):
                 pass
         return
 
+    # Custom help command
+@bot.command(name='help')
+async def help_command(ctx):
+    embed = discord.Embed(title="Bot Help", description="Here are the commands available:", color=discord.Color.blue())
+
+    # Add command categories and descriptions
+    embed.add_field(name="Moderation", value="Commands related to moderating members in the server.", inline=False)
+    embed.add_field(name="`&kick <user> [reason]`", value="Kicks a user from the server.", inline=False)
+    embed.add_field(name="`&ban <user> [reason]`", value="Bans a user from the server.", inline=False)
+    embed.add_field(name="`&timeout <user> <duration> [reason]`", value="Times out a user for a specified duration.", inline=False)
+    embed.add_field(name="`&unmute <user> [reason]`", value="Unmutes a timed-out user.", inline=False)
+
+    embed.add_field(name="Whitelist", value="Commands related to managing bot whitelist.", inline=False)
+    embed.add_field(name="`&whitelistbot <bot_id>`", value="Whitelists a bot by its ID.", inline=False)
+    embed.add_field(name="`&removewl <bot_id>`", value="Removes a bot from the whitelist.", inline=False)
+
+    embed.add_field(name="General", value="Other bot commands.", inline=False)
+    embed.add_field(name="`&help`", value="Displays this help message.", inline=False)
+    embed.add_field(name="`&emoji`", value="Sends an interactive emoji button.", inline=False)
+
+    embed.add_field(name="Information", value="Miscellaneous information commands.", inline=False)
+    embed.add_field(name="`&status`", value="Displays the bot's status.", inline=False)
+    
+    embed.set_footer(text="For more info, contact the admin.")
+    await ctx.send(embed=embed)
+
+    
+
     # Inappropriate language
     if any(word in message.content.lower() for word in blacklist):
         await message.delete()
