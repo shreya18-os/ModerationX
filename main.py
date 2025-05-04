@@ -136,17 +136,39 @@ async def check_for_auto_ban_or_kick(user):
 # Kick/Ban commands (Existing feature)
 @bot.command(name="kick")
 @commands.has_permissions(administrator=True)
-async def kick(ctx, user: discord.User, reason=None):
+async def kick(ctx, user: discord.Member, *, reason="No reason provided"):
+    try:
+        await user.send(f"You were kicked from **{ctx.guild.name}** for: {reason}")
+    except discord.Forbidden:
+        pass  # Can't send DM
+
     await user.kick(reason=reason)
     log_punishment(user.id, "Kick", reason)
-    await ctx.send(f"{user} was kicked for: {reason}")
+
+    embed = discord.Embed(title="User Kicked", color=discord.Color.orange())
+    embed.add_field(name="User", value=f"{user} ({user.id})", inline=False)
+    embed.add_field(name="Reason", value=reason, inline=False)
+    embed.set_footer(text=f"Action by {ctx.author}", icon_url=ctx.author.avatar.url)
+    await ctx.send(embed=embed)
+
 
 @bot.command(name="ban")
 @commands.has_permissions(administrator=True)
-async def ban(ctx, user: discord.User, reason=None):
+async def ban(ctx, user: discord.Member, *, reason="No reason provided"):
+    try:
+        await user.send(f"You were banned from **{ctx.guild.name}** for: {reason}")
+    except discord.Forbidden:
+        pass  # Can't send DM
+
     await user.ban(reason=reason)
     log_punishment(user.id, "Ban", reason)
-    await ctx.send(f"{user} was banned for: {reason}")
+
+    embed = discord.Embed(title="User Banned", color=discord.Color.red())
+    embed.add_field(name="User", value=f"{user} ({user.id})", inline=False)
+    embed.add_field(name="Reason", value=reason, inline=False)
+    embed.set_footer(text=f"Action by {ctx.author}", icon_url=ctx.author.avatar.url)
+    await ctx.send(embed=embed)
+
 
 # Custom Emoji Button for UI (Existing feature)
 @bot.command(name="emoji")
