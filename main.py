@@ -99,8 +99,10 @@ async def unban(ctx, user_id: int):
         await ctx.send("❌ No user found with that ID.")
     except discord.Forbidden:
         await ctx.send("❌ I don't have permission to unban members.")
-    except discord.HTTPException:
-        await ctx.send("❌ An error occurred while trying to unban the user.") 
+    except discord.HTTPException as e:
+        await ctx.send(f"❌ An error occurred while trying to unban the user: {e}")
+
+
 # Bot Whitelist
 WHITELIST_FILE = "whitelist.txt"
 
