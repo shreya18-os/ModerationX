@@ -345,8 +345,9 @@ async def update_status():
 
 @bot.event
 async def on_ready():
-    await tree.sync()
+    await bot.tree.sync()  # Make sure to sync the slash commands
     print(f"✅ Logged in as {bot.user} and synced commands.")
+
 
     
     # Start the background task loop
