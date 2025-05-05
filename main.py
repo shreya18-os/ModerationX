@@ -9,6 +9,8 @@ import time
 import re
 from discord.ui import Button, View
 from datetime import datetime, timedelta
+from discord import app_commands
+from discord.ext import commands
 
 # Bot setup
 intents = discord.Intents.all()
@@ -29,6 +31,20 @@ def db_connect():
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
     conn.commit()
     return conn, c
+
+
+@tree.command(name="help", description="View the help menu")
+async def help_command(interaction: discord.Interaction):
+    embed = discord.Embed(title="🤖 ModerationX Help Menu", color=discord.Color.blue())
+    embed.set_thumbnail(url=interaction.client.user.avatar.url if interaction.client.user.avatar else discord.Embed.Empty)
+    
+    for category, commands_list in categories.items():
+        command_str = ", ".join(f"`{cmd}`" for cmd in commands_list)
+        embed.add_field(name=f"📁 {category}", value=command_str, inline=False)
+
+    embed.set_footer(text="Use /<command> to run a command.")
+    await interaction.response.send_message(embed=embed, ephemeral=True)  # Ephemeral = only visible to the user
+
 
 # Logging and Punishments
 def log_punishment(user_id, punishment, reason):
