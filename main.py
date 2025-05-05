@@ -353,5 +353,8 @@ async def update_status():
     await bot.change_presence(activity=discord.Game(name=f"Protecting {total_members} members"), status=discord.Status.online)
 
 # Run the bot
-bot.run(os.getenv("TOKEN"))
+token = os.getenv('DISCORD_TOKEN')
+if not token:
+    raise RuntimeError("DISCORD_TOKEN not set in environment variables")
+bot.run(token)
 
