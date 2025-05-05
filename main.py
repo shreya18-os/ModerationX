@@ -143,19 +143,7 @@ def remove_from_whitelist(bot_id):
             if line.strip() != str(bot_id):
                 f.write(line + "\n")
 
-# Unified on_message
-@bot.event
-async def on_message(message):
-    # Unwhitelisted bot ping abuse
-    if message.author.bot:
-        wl = load_whitelist()
-        if str(message.author.id) not in wl and ("@everyone" in message.content or "@here" in message.content):
-            try:
-                await message.guild.kick(message.author, reason="Unwhitelisted bot ping abuse.")
-                await message.channel.send(f"🚨 `{message.author}` was kicked for mass ping.")
-            except discord.Forbidden:
-                pass
-        return
+
 
 
 # REMOVE DEFAULT HELP COMMAND
@@ -187,6 +175,7 @@ async def help_command(ctx):
     await ctx.send(embed=embed)
 
 # Unified on_message
+# Keep only one on_message function to prevent conflicts
 @bot.event
 async def on_message(message):
     if message.author.bot:
@@ -197,7 +186,7 @@ async def on_message(message):
                 await message.channel.send(f"🚨 `{message.author}` was kicked for mass ping.")
             except discord.Forbidden:
                 pass
-        await bot.process_commands(message)
+        await bot.process_commands(message)  # Make sure to process commands from messages
         return
 
     # Inappropriate language
@@ -221,6 +210,7 @@ async def on_message(message):
         await check_spam(message)
 
     await bot.process_commands(message)
+
 
 
 # Bot join: kick unwhitelisted bots
