@@ -34,7 +34,7 @@ def db_connect():
 
 
 # Slash command version of help
-@tree.command(name="help", description="View the help menu")
+@tree.command(name="modxhelp", description="View the help menu")
 async def slash_help(interaction: discord.Interaction):
     embed = discord.Embed(title="🤖 ModerationX Help Menu", color=discord.Color.blue())
     embed.set_thumbnail(url=interaction.client.user.avatar.url if interaction.client.user.avatar else discord.Embed.Empty)
