@@ -354,6 +354,7 @@ async def update_status():
 
 @bot.event
 async def on_ready():
+    await tree.sync()  # Sync slash commands to Discord
     print(f"✅ Logged in as {bot.user} | ID: {bot.user.id}")
     
     # Start the background task loop
