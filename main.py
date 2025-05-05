@@ -339,7 +339,11 @@ async def update_status():
 @bot.event
 async def on_ready():
     print(f"✅ Logged in as {bot.user} | ID: {bot.user.id}")
-    await update_status()  # Set status immediately on startup
+    
+    # Start the background task loop
+    if not update_status.is_running():
+        update_status.start()
+    
     print("🔧 ModerationX is now monitoring servers.")
 
 # Background task to update bot status every minute
@@ -347,9 +351,6 @@ async def on_ready():
 async def update_status():
     total_members = sum(g.member_count for g in bot.guilds)
     await bot.change_presence(activity=discord.Game(name=f"Protecting {total_members} members"), status=discord.Status.online)
-
-# Start background loop
-update_status.start()
 
 # Run the bot
 bot.run(os.getenv("TOKEN"))
