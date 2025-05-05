@@ -10,11 +10,11 @@ import re
 from discord.ui import Button, View
 from datetime import datetime, timedelta
 from discord import app_commands
-from discord.ext import commands
 
 # Bot setup
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="&", intents=intents)
+tree = bot.tree  # Needed for app_commands
 
 # Database setup
 def db_connect():
@@ -354,8 +354,8 @@ async def update_status():
 
 @bot.event
 async def on_ready():
-    await tree.sync()  # Sync slash commands to Discord
-    print(f"✅ Logged in as {bot.user} | ID: {bot.user.id}")
+    await tree.sync()
+    print(f"Bot connected as {bot.user}")
     
     # Start the background task loop
     if not update_status.is_running():
