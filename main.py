@@ -182,7 +182,6 @@ async def help_command(ctx):
     embed.add_field(name="`&emoji`", value="Sends an interactive emoji button.", inline=False)
 
     embed.add_field(name="Information", value="Miscellaneous information commands.", inline=False)
-    embed.add_field(name="`&status`", value="Displays the bot's status.", inline=False)
 
     embed.set_footer(text="For more info, contact the admin.")
     await ctx.send(embed=embed)
