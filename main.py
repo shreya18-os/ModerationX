@@ -143,7 +143,7 @@ async def on_message(message):
 # REMOVE DEFAULT HELP COMMAND
 bot.remove_command('help')
 
-    # Custom help command
+# Custom help command
 @bot.command(name='help')
 async def help_command(ctx):
     embed = discord.Embed(title="Bot Help", description="Here are the commands available:", color=discord.Color.blue())
@@ -165,11 +165,23 @@ async def help_command(ctx):
 
     embed.add_field(name="Information", value="Miscellaneous information commands.", inline=False)
     embed.add_field(name="`&status`", value="Displays the bot's status.", inline=False)
-    
+
     embed.set_footer(text="For more info, contact the admin.")
     await ctx.send(embed=embed)
 
-    
+# Unified on_message
+@bot.event
+async def on_message(message):
+    if message.author.bot:
+        wl = load_whitelist()
+        if str(message.author.id) not in wl and ("@everyone" in message.content or "@here" in message.content):
+            try:
+                await message.guild.kick(message.author, reason="Unwhitelisted bot ping abuse.")
+                await message.channel.send(f"🚨 `{message.author}` was kicked for mass ping.")
+            except discord.Forbidden:
+                pass
+        await bot.process_commands(message)
+        return
 
     # Inappropriate language
     if any(word in message.content.lower() for word in blacklist):
@@ -192,6 +204,7 @@ async def help_command(ctx):
         await check_spam(message)
 
     await bot.process_commands(message)
+
 
 # Bot join: kick unwhitelisted bots
 @bot.event
