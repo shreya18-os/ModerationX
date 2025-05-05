@@ -33,17 +33,19 @@ def db_connect():
     return conn, c
 
 
+# Slash command version of help
 @tree.command(name="help", description="View the help menu")
-async def help_command(interaction: discord.Interaction):
+async def slash_help(interaction: discord.Interaction):
     embed = discord.Embed(title="🤖 ModerationX Help Menu", color=discord.Color.blue())
     embed.set_thumbnail(url=interaction.client.user.avatar.url if interaction.client.user.avatar else discord.Embed.Empty)
-    
-    for category, commands_list in categories.items():
-        command_str = ", ".join(f"`{cmd}`" for cmd in commands_list)
-        embed.add_field(name=f"📁 {category}", value=command_str, inline=False)
+
+    # Example commands (you can replace or make this dynamic)
+    embed.add_field(name="Moderation", value="`kick`, `ban`, `timeout`, `unmute`", inline=False)
+    embed.add_field(name="Whitelist", value="`whitelistbot`, `removewl`", inline=False)
 
     embed.set_footer(text="Use /<command> to run a command.")
-    await interaction.response.send_message(embed=embed, ephemeral=True)  # Ephemeral = only visible to the user
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+
 
 
 # Logging and Punishments
@@ -355,7 +357,8 @@ async def update_status():
 @bot.event
 async def on_ready():
     await tree.sync()
-    print(f"Bot connected as {bot.user}")
+    print(f"✅ Logged in as {bot.user} and synced commands.")
+
     
     # Start the background task loop
     if not update_status.is_running():
