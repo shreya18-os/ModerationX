@@ -18,20 +18,31 @@ tree = bot.tree  # Needed for app_commands
 
 # Database setup
 def db_connect():
-    conn = sqlite3.connect('database.db')
+    conn = sqlite3.connect('database.db')  # Connect to SQLite database
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS punishments (
                 user_id INTEGER,
                 punishment TEXT,
                 reason TEXT,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')  # Create punishments table if it doesn't exist
     c.execute('''CREATE TABLE IF NOT EXISTS warnings (
                 user_id INTEGER,
                 reason TEXT,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
-    conn.commit()
-    return conn, c
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')  # Create warnings table if it doesn't exist
+    conn.commit()  # Commit changes
+    return conn, c  # Return connection and cursor
 
+
+# Initialize SQLite
+conn = sqlite3.connect('whitelist.db')
+c = conn.cursor()
+c.execute('''
+    CREATE TABLE IF NOT EXISTS whitelist (
+        guild_id INTEGER,
+        bot_id INTEGER
+    )
+''')
+conn.commit()
 
 # Slash command version of help
 @tree.command(name="help", description="View the help menu")
@@ -54,44 +65,59 @@ async def slash_help(interaction: discord.Interaction):
 
 # Logging and Punishments
 def log_punishment(user_id, punishment, reason):
-    conn, c = db_connect()
-    c.execute("INSERT INTO punishments (user_id, punishment, reason) VALUES (?, ?, ?)",
-              (user_id, punishment, reason))
-    conn.commit()
-    conn.close()
+    try:
+        conn, c = db_connect()
+        c.execute("INSERT INTO punishments (user_id, punishment, reason) VALUES (?, ?, ?)", 
+                  (user_id, punishment, reason))
+        conn.commit()
+        conn.close()
+    except sqlite3.Error as e:
+        print(f"Database error: {e}")
+        # Handle the error or log it for debugging
 
 def log_warning(user_id, reason):
-    conn, c = db_connect()
-    c.execute("INSERT INTO warnings (user_id, reason) VALUES (?, ?)", (user_id, reason))
-    conn.commit()
-    conn.close()
+    conn, c = db_connect()  # Establish connection
+    c.execute("INSERT INTO warnings (user_id, reason) VALUES (?, ?)", 
+              (user_id, reason))  # Insert warning record
+    conn.commit()  # Commit changes
+    conn.close()  # Close connection
+
 
 # Warning threshold check
 def should_auto_punish(user_id):
-    conn, c = db_connect()
-    c.execute("SELECT COUNT(*) FROM warnings WHERE user_id = ?", (user_id,))
-    count = c.fetchone()[0]
+    conn, c = db_connect()  # Establish connection
+    c.execute("SELECT COUNT(*) FROM warnings WHERE user_id = ?", (user_id,))  # Query the number of warnings
+    count = c.fetchone()[0]  # Fetch the result
+    conn.close()  # Close connection
+    return count  # Return the count of warnings
+
+def load_whitelist():
+    conn, c = db_connect()  # Connect to the database
+    c.execute("SELECT bot_id FROM whitelist")  # Get all whitelisted bot IDs
+    whitelisted_bots = [row[0] for row in c.fetchall()]  # Fetch all bot IDs
     conn.close()
-    return count
+    return whitelisted_bots
+
 
 async def check_for_auto_ban_or_kick(user, channel=None):
-    count = should_auto_punish(user.id)
-    if count >= 5:
+    count = should_auto_punish(user.id)  # Get the warning count
+    if count >= 5:  # If the user has 5 or more warnings
         try:
-            await user.ban(reason="Exceeded warning limit")
-            log_punishment(user.id, "Ban", "Exceeded warning limit")
+            await user.ban(reason="Exceeded warning limit")  # Ban the user
+            log_punishment(user.id, "Ban", "Exceeded warning limit")  # Log the punishment
             if channel:
-                await channel.send(f"{user.mention} was banned for exceeding warning limit.")
+                await channel.send(f"{user.mention} was banned for exceeding warning limit.")  # Inform the channel
         except discord.Forbidden:
             pass
     elif count >= 3:
-        try:
-            await user.kick(reason="Exceeded warning limit")
-            log_punishment(user.id, "Kick", "Exceeded warning limit")
-            if channel:
-                await channel.send(f"{user.mention} was kicked for exceeding warning limit.")
-        except discord.Forbidden:
-            pass
+    try:
+        await user.kick(reason="Exceeded warning limit")
+        log_punishment(user.id, "Kick", "Exceeded warning limit")
+        if channel:
+            await channel.send(f"{user.mention} was kicked for exceeding warning limit.")
+    except discord.Forbidden:
+        pass
+
 
 # Message Filter & Spam
 blacklist = ["badword1", "badword2", "badword3"]
@@ -126,26 +152,50 @@ async def unban(ctx, user_id: int):
 
 
 # Bot Whitelist
-WHITELIST_FILE = "whitelist.txt"
+# Add bot to server-specific whitelist
+def add_to_whitelist(guild_id: int, bot_id: int):
+    conn, c = db_connect()
+    with conn:
+        c.execute("INSERT OR IGNORE INTO whitelist (guild_id, bot_id) VALUES (?, ?)", (guild_id, bot_id))
+    conn.close()
 
-def load_whitelist():
-    if not os.path.exists(WHITELIST_FILE):
-        return set()
-    with open(WHITELIST_FILE) as f:
-        return set(line.strip() for line in f)
+# Remove bot from whitelist
+def remove_from_whitelist(guild_id: int, bot_id: int):
+    conn, c = db_connect()
+    with conn:
+        c.execute("DELETE FROM whitelist WHERE guild_id = ? AND bot_id = ?", (guild_id, bot_id))
+    conn.close()
 
-def save_to_whitelist(bot_id):
-    with open(WHITELIST_FILE, "a") as f:
-        f.write(f"{bot_id}\n")
+# Check if bot is whitelisted in this guild
+def is_bot_whitelisted(guild_id: int, bot_id: int) -> bool:
+    cursor = conn.execute("SELECT 1 FROM whitelist WHERE guild_id = ? AND bot_id = ?", (guild_id, bot_id))
+    return cursor.fetchone() is not None
 
-def remove_from_whitelist(bot_id):
-    if not os.path.exists(WHITELIST_FILE):
-        return
-    lines = open(WHITELIST_FILE).read().splitlines()
-    with open(WHITELIST_FILE, "w") as f:
-        for line in lines:
-            if line.strip() != str(bot_id):
-                f.write(line + "\n")
+
+# Whitelist bot command
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def whitelistbot(ctx, bot_id: int):
+    user = await bot.fetch_user(bot_id)
+    if not user.bot:
+        return await ctx.send("That user is not a bot.")
+    if is_bot_whitelisted(ctx.guild.id, bot_id):
+        return await ctx.send("This bot is already whitelisted in this server.")
+    add_to_whitelist(ctx.guild.id, bot_id)
+    await ctx.send(f"{user.name} has been whitelisted in **{ctx.guild.name}**.")
+
+# Unwhitelist bot command
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def unwhitelistbot(ctx, bot_id: int):
+    user = await bot.fetch_user(bot_id)
+    if not user.bot:
+        return await ctx.send("That user is not a bot.")
+    if not is_bot_whitelisted(ctx.guild.id, bot_id):
+        return await ctx.send("This bot is not whitelisted in this server.")
+    remove_from_whitelist(ctx.guild.id, bot_id)
+    await ctx.send(f"{user.name} has been removed from the whitelist in **{ctx.guild.name}**.")
+
 
 
 
@@ -167,7 +217,7 @@ async def help_command(ctx):
 
     embed.add_field(name="Whitelist", value="Commands related to managing bot whitelist.", inline=False)
     embed.add_field(name="`&whitelistbot <bot_id>`", value="Whitelists a bot by its ID.", inline=False)
-    embed.add_field(name="`&removewl <bot_id>`", value="Removes a bot from the whitelist.", inline=False)
+    embed.add_field(name="`&unwhitelistbot <bot_id>`", value="Removes a bot from the whitelist.", inline=False)
 
     embed.add_field(name="General", value="Other bot commands.", inline=False)
     embed.add_field(name="`&help`", value="Displays this help message.", inline=False)
@@ -233,17 +283,6 @@ async def on_member_join(member):
                 await member.guild.system_channel.send("⚠️ Cannot kick bot.")
 
 # Whitelist commands
-@bot.command(name="whitelistbot")
-@commands.has_permissions(administrator=True)
-async def whitelist_bot(ctx, bot_id: int):
-    save_to_whitelist(bot_id)
-    await ctx.send(f"✅ Whitelisted bot `{bot_id}`.")
-
-@bot.command(name="removewl")
-@commands.has_permissions(administrator=True)
-async def remove_wl(ctx, bot_id: int):
-    remove_from_whitelist(bot_id)
-    await ctx.send(f"🗑️ Removed bot `{bot_id}` from whitelist.")
 
 # Audit log checks
 async def check_audit(guild, action):
@@ -280,14 +319,37 @@ async def on_guild_update(before, after):
 # Moderation commands
 @bot.command(name="kick")
 @commands.has_permissions(kick_members=True)
-async def kick(ctx, user: discord.Member, *, reason="No reason provided"):
+async def kick(ctx, user: discord.Member = None, *, reason="No reason provided"):
+    if user is None:
+        return await ctx.send("⚠️ Please mention a user to kick.")
+
+    if user == ctx.author:
+        return await ctx.send("❌ You cannot kick yourself.")
+
+    if user.top_role >= ctx.author.top_role and ctx.author != ctx.guild.owner:
+        return await ctx.send("❌ You can't kick someone with an equal or higher role than you.")
+
+    if user.top_role >= ctx.guild.me.top_role:
+        return await ctx.send("❌ I can't kick someone with a higher or equal role than mine.")
+
     try:
-        await user.send(f"You were kicked from {ctx.guild.name} for: {reason}")
+        await user.send(f"You were kicked from **{ctx.guild.name}** for: **{reason}**")
     except discord.Forbidden:
-        pass
+        pass  # Cannot send DM
+
     await user.kick(reason=reason)
     log_punishment(user.id, "Kick", reason)
-    await ctx.send(f"✅ {user.mention} kicked: {reason}")
+    await ctx.send(f"✅ {user.mention} has been kicked. Reason: **{reason}**")
+
+@kick.error
+async def kick_error(ctx, error):
+    if isinstance(error, commands.MissingPermissions):
+        await ctx.send("❌ You don't have permission to kick members.")
+    elif isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("⚠️ Please mention a user to kick. Example: `.kick @user reason`")
+    else:
+        await ctx.send(f"⚠️ An error occurred: `{str(error)}`")
+
 
 @bot.command(name="ban")
 @commands.has_permissions(ban_members=True)
