@@ -109,14 +109,15 @@ async def check_for_auto_ban_or_kick(user, channel=None):
                 await channel.send(f"{user.mention} was banned for exceeding warning limit.")  # Inform the channel
         except discord.Forbidden:
             pass
-    elif count >= 3:
-    try:
-        await user.kick(reason="Exceeded warning limit")
-        log_punishment(user.id, "Kick", "Exceeded warning limit")
-        if channel:
-            await channel.send(f"{user.mention} was kicked for exceeding warning limit.")
-    except discord.Forbidden:
-        pass
+    elif count >= 3:  # If the user has 3 or more warnings but less than 5
+        try:
+            await user.kick(reason="Exceeded warning limit")  # Kick the user
+            log_punishment(user.id, "Kick", "Exceeded warning limit")  # Log the punishment
+            if channel:
+                await channel.send(f"{user.mention} was kicked for exceeding warning limit.")  # Inform the channel
+        except discord.Forbidden:
+            pass
+
 
 
 # Message Filter & Spam
