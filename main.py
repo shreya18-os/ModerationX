@@ -214,27 +214,56 @@ bot.remove_command('help')
 # Custom help command
 @bot.command(name='help')
 async def help_command(ctx):
-    embed = discord.Embed(title="Bot Help", description="Here are the commands available:", color=discord.Color.blue())
+    embed = discord.Embed(
+        title="🛡️ ModerationX Help Center",
+        description="Welcome to **ModerationX**, your all-in-one smart moderation assistant.\n\nUse `&<command>` to run any of the following:",
+        color=discord.Color.from_rgb(44, 47, 51)
+    )
 
-    # Add command categories and descriptions
-    embed.add_field(name="Moderation", value="Commands related to moderating members in the server.", inline=False)
-    embed.add_field(name="`&kick <user> [reason]`", value="Kicks a user from the server.", inline=False)
-    embed.add_field(name="`&ban <user> [reason]`", value="Bans a user from the server.", inline=False)
-    embed.add_field(name="`&timeout <user> <duration> [reason]`", value="Times out a user for a specified duration.", inline=False)
-    embed.add_field(name="`&unmute <user> [reason]`", value="Unmutes a timed-out user.", inline=False)
+    # Logo URL
+    logo_url = "https://media.discordapp.net/attachments/1368586215753781269/1385574575764672532/avatars.png?ex=68569061&is=68553ee1&hm=7bf72e11f4884054941162cc24bfca2f2808fbea4ff02f8694aadcd5ee501769&=&format=webp&quality=lossless"
+    embed.set_thumbnail(url=logo_url)
 
-    embed.add_field(name="Whitelist", value="Commands related to managing bot whitelist.", inline=False)
-    embed.add_field(name="`&whitelistbot <bot_id>`", value="Whitelists a bot by its ID.", inline=False)
-    embed.add_field(name="`&unwhitelistbot <bot_id>`", value="Removes a bot from the whitelist.", inline=False)
+    # Moderation Commands
+    embed.add_field(
+        name="🔨 Moderation Tools",
+        value=(
+            "`&kick <user> [reason]` — Kick a user\n"
+            "`&ban <user> [reason]` — Ban a user\n"
+            "`&timeout <user> <duration>` — Temporarily mute a user\n"
+            "`&unmute <user>` — Remove timeout"
+        ),
+        inline=False
+    )
 
-    embed.add_field(name="General", value="Other bot commands.", inline=False)
-    embed.add_field(name="`&help`", value="Displays this help message.", inline=False)
-    embed.add_field(name="`&emoji`", value="Sends an interactive emoji button.", inline=False)
+    # Whitelist Commands
+    embed.add_field(
+        name="⚙️ Bot Whitelist",
+        value=(
+            "`&whitelistbot <bot_id>` — Whitelist a bot\n"
+            "`&unwhitelistbot <bot_id>` — Remove a bot from whitelist"
+        ),
+        inline=False
+    )
 
-    embed.add_field(name="Information", value="Miscellaneous information commands.", inline=False)
+    # General Commands
+    embed.add_field(
+        name="🧰 General Commands",
+        value=(
+            "`&help` — Show this help menu\n"
+            "`&emoji` — Send an emoji button"
+        ),
+        inline=False
+    )
 
-    embed.set_footer(text="For more info, contact the admin.")
+    # Footer
+    embed.set_footer(
+        text="ModerationX • Smart. Secure. Swift.",
+        icon_url=logo_url
+    )
+
     await ctx.send(embed=embed)
+
 
 # Unified on_message
 # Keep only one on_message function to prevent conflicts
