@@ -34,8 +34,7 @@ def db_connect():
 
 
 # Initialize SQLite
-conn = sqlite3.connect('whitelist.db')
-c = conn.cursor()
+conn, c = db_connect()
 c.execute('''
     CREATE TABLE IF NOT EXISTS whitelist (
         guild_id INTEGER,
@@ -43,6 +42,8 @@ c.execute('''
     )
 ''')
 conn.commit()
+conn.close()
+
 
 # Slash command version of help
 @tree.command(name="help", description="View the help menu")
@@ -92,15 +93,17 @@ def should_auto_punish(user_id):
     return count  # Return the count of warnings
 
 def load_whitelist():
-    conn, c = db_connect()  # Connect to the database
-    c.execute("SELECT bot_id FROM whitelist")  # Get all whitelisted bot IDs
-    whitelisted_bots = [row[0] for row in c.fetchall()]  # Fetch all bot IDs
+    conn, c = db_connect()
+    c.execute("SELECT bot_id FROM whitelist")
+    whitelisted_bots = [str(row[0]) for row in c.fetchall()]  # convert to str
     conn.close()
     return whitelisted_bots
 
 
+
 async def check_for_auto_ban_or_kick(user, channel=None):
     count = should_auto_punish(user.id)  # Get the warning count
+    print(f"[DEBUG] {user} has {count} warnings")  # ✅ Helps trace issues
     if count >= 5:  # If the user has 5 or more warnings
         try:
             await user.ban(reason="Exceeded warning limit")  # Ban the user
@@ -169,8 +172,12 @@ def remove_from_whitelist(guild_id: int, bot_id: int):
 
 # Check if bot is whitelisted in this guild
 def is_bot_whitelisted(guild_id: int, bot_id: int) -> bool:
-    cursor = conn.execute("SELECT 1 FROM whitelist WHERE guild_id = ? AND bot_id = ?", (guild_id, bot_id))
-    return cursor.fetchone() is not None
+    conn, c = db_connect()
+    c.execute("SELECT 1 FROM whitelist WHERE guild_id = ? AND bot_id = ?", (guild_id, bot_id))
+    result = c.fetchone()
+    conn.close()
+    return result is not None
+
 
 
 # Whitelist bot command
@@ -405,10 +412,6 @@ async def emoji(ctx):
     view.add_item(button)
     await ctx.send("Here’s a button!", view=view)
 
-# Status updater\@tasks.loop(seconds=60)
-async def update_status():
-    total = sum(len(g.members) for g in bot.guilds)
-    await bot.change_presence(activity=discord.Game(name=f"Protecting {total} members"), status=discord.Status.online)
 
 @bot.event
 async def on_ready():
