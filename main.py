@@ -313,7 +313,7 @@ async def on_member_join(member):
             try:
                 await member.kick(reason="Unwhitelisted bot.")
                 await member.guild.system_channel.send(
-                    f"{member} kicked; use `&whitelistbot {member.id}` to allow."
+                    f"{member} was kicked to prevent bot flooding, if you trust the bot; use `&whitelistbot {member.id}` to allow."
                 )
                 log_punishment(member.id, "Bot Kick", "Unwhitelisted bot")
             except discord.Forbidden:
